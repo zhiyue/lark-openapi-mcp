@@ -103,6 +103,95 @@ function extractDocumentId(documentIdOrUrl: string): string {
 }
 
 /**
+ * 辅助函数：分页获取文档的所有块
+ */
+async function getAllDocumentBlocks(
+  client: lark.Client,
+  documentId: string,
+  userAccessToken?: string,
+  useUAT?: boolean,
+): Promise<BlockItem[]> {
+  const allItems: BlockItem[] = [];
+  let pageToken: string | undefined;
+  const PAGE_SIZE = 500;
+
+  do {
+    const response =
+      userAccessToken && useUAT
+        ? await client.docx.v1.documentBlock.list(
+            {
+              path: { document_id: documentId },
+              params: {
+                page_size: PAGE_SIZE,
+                document_revision_id: -1,
+                page_token: pageToken,
+              },
+            },
+            lark.withUserAccessToken(userAccessToken),
+          )
+        : await client.docx.v1.documentBlock.list({
+            path: { document_id: documentId },
+            params: {
+              page_size: PAGE_SIZE,
+              document_revision_id: -1,
+              page_token: pageToken,
+            },
+          });
+
+    const items = (response.data?.items || []) as BlockItem[];
+    allItems.push(...items);
+    pageToken = response.data?.page_token;
+  } while (pageToken);
+
+  return allItems;
+}
+
+/**
+ * 辅助函数：分页获取块的所有子块
+ */
+async function getAllBlockChildren(
+  client: lark.Client,
+  documentId: string,
+  blockId: string,
+  userAccessToken?: string,
+  useUAT?: boolean,
+): Promise<BlockItem[]> {
+  const allItems: BlockItem[] = [];
+  let pageToken: string | undefined;
+  const PAGE_SIZE = 500;
+
+  do {
+    const response =
+      userAccessToken && useUAT
+        ? await client.docx.v1.documentBlockChildren.get(
+            {
+              path: { document_id: documentId, block_id: blockId },
+              params: {
+                document_revision_id: -1,
+                page_size: PAGE_SIZE,
+                page_token: pageToken,
+              },
+            },
+            lark.withUserAccessToken(userAccessToken),
+          )
+        : await client.docx.v1.documentBlockChildren.get({
+            path: { document_id: documentId, block_id: blockId },
+            params: {
+              document_revision_id: -1,
+              page_size: PAGE_SIZE,
+              page_token: pageToken,
+            },
+          });
+
+    const items = (response.data?.items || []) as BlockItem[];
+    allItems.push(...items);
+    pageToken = response.data?.page_token;
+  } while (pageToken);
+
+  return allItems;
+}
+
+/**
  * 辅助函数：将简单文本转换为文档块结构
  */
 function textToBlock(text: string, blockType: number = 2): DocumentBlock {
@@ -548,22 +637,8 @@ export const larkDocxAppendTool: McpTool = {
         }
       }
 
-      // 获取文档块列表以确定插入位置
-      const blocksResponse =
-        userAccessToken && params.useUAT
-          ? await client.docx.v1.documentBlock.list(
-              {
-                path: { document_id: documentId },
-                params: { page_size: 500, document_revision_id: -1 },
-              },
-              lark.withUserAccessToken(userAccessToken),
-            )
-          : await client.docx.v1.documentBlock.list({
-              path: { document_id: documentId },
-              params: { page_size: 500, document_revision_id: -1 },
-            });
-
-      const items = blocksResponse.data?.items || [];
+      // 获取文档所有块以确定插入位置（支持分页）
+      const items = await getAllDocumentBlocks(client, documentId, userAccessToken, params.useUAT);
       const insertIndex = items.length > 0 ? items.length - 1 : 0;
 
       // 创建子块
@@ -655,22 +730,8 @@ export const larkDocxReplaceTool: McpTool = {
       const documentId = extractDocumentId(params.data.document_id);
       const { search_text, replace_text, block_id, replace_all } = params.data;
 
-      // 获取文档块列表
-      const blocksResponse =
-        userAccessToken && params.useUAT
-          ? await client.docx.v1.documentBlock.list(
-              {
-                path: { document_id: documentId },
-                params: { page_size: 500, document_revision_id: -1 },
-              },
-              lark.withUserAccessToken(userAccessToken),
-            )
-          : await client.docx.v1.documentBlock.list({
-              path: { document_id: documentId },
-              params: { page_size: 500, document_revision_id: -1 },
-            });
-
-      const items = blocksResponse.data?.items || [];
+      // 获取文档所有块（支持分页）
+      const items = await getAllDocumentBlocks(client, documentId, userAccessToken, params.useUAT);
       const updateRequests: UpdateRequest[] = [];
       let replacedCount = 0;
 
@@ -844,23 +905,9 @@ export const larkDocxEditTool: McpTool = {
 
       switch (mode) {
         case 'append': {
-          // 获取文档块列表以确定插入位置
-          const blocksResponse =
-            userAccessToken && params.useUAT
-              ? await client.docx.v1.documentBlock.list(
-                  {
-                    path: { document_id: documentId },
-                    params: { page_size: 500, document_revision_id: -1 },
-                  },
-                  lark.withUserAccessToken(userAccessToken),
-                )
-              : await client.docx.v1.documentBlock.list({
-                  path: { document_id: documentId },
-                  params: { page_size: 500, document_revision_id: -1 },
-                });
-
-          const items = blocksResponse.data?.items || [];
-          const insertIndex = items.length > 0 ? items.length - 1 : 0;
+          // 获取文档所有块以确定插入位置（支持分页）
+          const appendItems = await getAllDocumentBlocks(client, documentId, userAccessToken, params.useUAT);
+          const insertIndex = appendItems.length > 0 ? appendItems.length - 1 : 0;
 
           response =
             userAccessToken && params.useUAT
@@ -933,22 +980,8 @@ export const larkDocxEditTool: McpTool = {
 
           const parentId = blockInfo.data?.block?.parent_id || documentId;
 
-          // 获取父块的子块列表以确定位置
-          const childrenResponse =
-            userAccessToken && params.useUAT
-              ? await client.docx.v1.documentBlockChildren.get(
-                  {
-                    path: { document_id: documentId, block_id: parentId },
-                    params: { document_revision_id: -1, page_size: 500 },
-                  },
-                  lark.withUserAccessToken(userAccessToken),
-                )
-              : await client.docx.v1.documentBlockChildren.get({
-                  path: { document_id: documentId, block_id: parentId },
-                  params: { document_revision_id: -1, page_size: 500 },
-                });
-
-          const children = childrenResponse.data?.items || [];
+          // 获取父块的所有子块以确定位置（支持分页）
+          const children = await getAllBlockChildren(client, documentId, parentId, userAccessToken, params.useUAT);
           const blockIndex = children.findIndex((c: BlockItem) => c.block_id === block_id);
 
           // 删除原块，并获取新的 document_revision_id
@@ -990,22 +1023,8 @@ export const larkDocxEditTool: McpTool = {
         }
 
         case 'clear_and_write': {
-          // 获取所有子块
-          const childrenResponse =
-            userAccessToken && params.useUAT
-              ? await client.docx.v1.documentBlockChildren.get(
-                  {
-                    path: { document_id: documentId, block_id: documentId },
-                    params: { document_revision_id: -1, page_size: 500 },
-                  },
-                  lark.withUserAccessToken(userAccessToken),
-                )
-              : await client.docx.v1.documentBlockChildren.get({
-                  path: { document_id: documentId, block_id: documentId },
-                  params: { document_revision_id: -1, page_size: 500 },
-                });
-
-          const existingChildren = childrenResponse.data?.items || [];
+          // 获取所有子块（支持分页）
+          const existingChildren = await getAllBlockChildren(client, documentId, documentId, userAccessToken, params.useUAT);
 
           // 删除所有现有子块（如果有的话）
           if (existingChildren.length > 0) {

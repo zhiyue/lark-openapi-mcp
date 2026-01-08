@@ -103,6 +103,95 @@ function extractDocumentId(documentIdOrUrl: string): string {
 }
 
 /**
+ * Helper function: Get all document blocks with pagination
+ */
+async function getAllDocumentBlocks(
+  client: lark.Client,
+  documentId: string,
+  userAccessToken?: string,
+  useUAT?: boolean,
+): Promise<BlockItem[]> {
+  const allItems: BlockItem[] = [];
+  let pageToken: string | undefined;
+  const PAGE_SIZE = 500;
+
+  do {
+    const response =
+      userAccessToken && useUAT
+        ? await client.docx.v1.documentBlock.list(
+            {
+              path: { document_id: documentId },
+              params: {
+                page_size: PAGE_SIZE,
+                document_revision_id: -1,
+                page_token: pageToken,
+              },
+            },
+            lark.withUserAccessToken(userAccessToken),
+          )
+        : await client.docx.v1.documentBlock.list({
+            path: { document_id: documentId },
+            params: {
+              page_size: PAGE_SIZE,
+              document_revision_id: -1,
+              page_token: pageToken,
+            },
+          });
+
+    const items = (response.data?.items || []) as BlockItem[];
+    allItems.push(...items);
+    pageToken = response.data?.page_token;
+  } while (pageToken);
+
+  return allItems;
+}
+
+/**
+ * Helper function: Get all block children with pagination
+ */
+async function getAllBlockChildren(
+  client: lark.Client,
+  documentId: string,
+  blockId: string,
+  userAccessToken?: string,
+  useUAT?: boolean,
+): Promise<BlockItem[]> {
+  const allItems: BlockItem[] = [];
+  let pageToken: string | undefined;
+  const PAGE_SIZE = 500;
+
+  do {
+    const response =
+      userAccessToken && useUAT
+        ? await client.docx.v1.documentBlockChildren.get(
+            {
+              path: { document_id: documentId, block_id: blockId },
+              params: {
+                document_revision_id: -1,
+                page_size: PAGE_SIZE,
+                page_token: pageToken,
+              },
+            },
+            lark.withUserAccessToken(userAccessToken),
+          )
+        : await client.docx.v1.documentBlockChildren.get({
+            path: { document_id: documentId, block_id: blockId },
+            params: {
+              document_revision_id: -1,
+              page_size: PAGE_SIZE,
+              page_token: pageToken,
+            },
+          });
+
+    const items = (response.data?.items || []) as BlockItem[];
+    allItems.push(...items);
+    pageToken = response.data?.page_token;
+  } while (pageToken);
+
+  return allItems;
+}
+
+/**
  * Helper function: Convert simple text to document block structure
  */
 function textToBlock(text: string, blockType: number = 2): DocumentBlock {
@@ -548,22 +637,8 @@ export const larkDocxAppendTool: McpTool = {
         }
       }
 
-      // Get document block list to determine insertion position
-      const blocksResponse =
-        userAccessToken && params.useUAT
-          ? await client.docx.v1.documentBlock.list(
-              {
-                path: { document_id: documentId },
-                params: { page_size: 500, document_revision_id: -1 },
-              },
-              lark.withUserAccessToken(userAccessToken),
-            )
-          : await client.docx.v1.documentBlock.list({
-              path: { document_id: documentId },
-              params: { page_size: 500, document_revision_id: -1 },
-            });
-
-      const items = blocksResponse.data?.items || [];
+      // Get all document blocks to determine insertion position (with pagination)
+      const items = await getAllDocumentBlocks(client, documentId, userAccessToken, params.useUAT);
       const insertIndex = items.length > 0 ? items.length - 1 : 0;
 
       // Create child blocks
@@ -655,22 +730,8 @@ export const larkDocxReplaceTool: McpTool = {
       const documentId = extractDocumentId(params.data.document_id);
       const { search_text, replace_text, block_id, replace_all } = params.data;
 
-      // Get document block list
-      const blocksResponse =
-        userAccessToken && params.useUAT
-          ? await client.docx.v1.documentBlock.list(
-              {
-                path: { document_id: documentId },
-                params: { page_size: 500, document_revision_id: -1 },
-              },
-              lark.withUserAccessToken(userAccessToken),
-            )
-          : await client.docx.v1.documentBlock.list({
-              path: { document_id: documentId },
-              params: { page_size: 500, document_revision_id: -1 },
-            });
-
-      const items = blocksResponse.data?.items || [];
+      // Get all document blocks (with pagination)
+      const items = await getAllDocumentBlocks(client, documentId, userAccessToken, params.useUAT);
       const updateRequests: UpdateRequest[] = [];
       let replacedCount = 0;
 
@@ -844,23 +905,9 @@ export const larkDocxEditTool: McpTool = {
 
       switch (mode) {
         case 'append': {
-          // Get document block list to determine insertion position
-          const blocksResponse =
-            userAccessToken && params.useUAT
-              ? await client.docx.v1.documentBlock.list(
-                  {
-                    path: { document_id: documentId },
-                    params: { page_size: 500, document_revision_id: -1 },
-                  },
-                  lark.withUserAccessToken(userAccessToken),
-                )
-              : await client.docx.v1.documentBlock.list({
-                  path: { document_id: documentId },
-                  params: { page_size: 500, document_revision_id: -1 },
-                });
-
-          const items = blocksResponse.data?.items || [];
-          const insertIndex = items.length > 0 ? items.length - 1 : 0;
+          // Get all document blocks to determine insertion position (with pagination)
+          const appendItems = await getAllDocumentBlocks(client, documentId, userAccessToken, params.useUAT);
+          const insertIndex = appendItems.length > 0 ? appendItems.length - 1 : 0;
 
           response =
             userAccessToken && params.useUAT
@@ -933,22 +980,8 @@ export const larkDocxEditTool: McpTool = {
 
           const parentId = blockInfo.data?.block?.parent_id || documentId;
 
-          // Get parent block's children list to determine position
-          const childrenResponse =
-            userAccessToken && params.useUAT
-              ? await client.docx.v1.documentBlockChildren.get(
-                  {
-                    path: { document_id: documentId, block_id: parentId },
-                    params: { document_revision_id: -1, page_size: 500 },
-                  },
-                  lark.withUserAccessToken(userAccessToken),
-                )
-              : await client.docx.v1.documentBlockChildren.get({
-                  path: { document_id: documentId, block_id: parentId },
-                  params: { document_revision_id: -1, page_size: 500 },
-                });
-
-          const children = childrenResponse.data?.items || [];
+          // Get all parent block's children to determine position (with pagination)
+          const children = await getAllBlockChildren(client, documentId, parentId, userAccessToken, params.useUAT);
           const blockIndex = children.findIndex((c: BlockItem) => c.block_id === block_id);
 
           // Delete original block and get new document_revision_id
@@ -990,22 +1023,8 @@ export const larkDocxEditTool: McpTool = {
         }
 
         case 'clear_and_write': {
-          // Get all children
-          const childrenResponse =
-            userAccessToken && params.useUAT
-              ? await client.docx.v1.documentBlockChildren.get(
-                  {
-                    path: { document_id: documentId, block_id: documentId },
-                    params: { document_revision_id: -1, page_size: 500 },
-                  },
-                  lark.withUserAccessToken(userAccessToken),
-                )
-              : await client.docx.v1.documentBlockChildren.get({
-                  path: { document_id: documentId, block_id: documentId },
-                  params: { document_revision_id: -1, page_size: 500 },
-                });
-
-          const existingChildren = childrenResponse.data?.items || [];
+          // Get all children (with pagination)
+          const existingChildren = await getAllBlockChildren(client, documentId, documentId, userAccessToken, params.useUAT);
 
           // Delete all existing children (if any)
           if (existingChildren.length > 0) {
