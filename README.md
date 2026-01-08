@@ -1,8 +1,8 @@
 # Feishu/Lark OpenAPI MCP
 
-[![npm version](https://img.shields.io/npm/v/@larksuiteoapi/lark-mcp.svg)](https://www.npmjs.com/package/@larksuiteoapi/lark-mcp)
-[![npm downloads](https://img.shields.io/npm/dm/@larksuiteoapi/lark-mcp.svg)](https://www.npmjs.com/package/@larksuiteoapi/lark-mcp)
-[![Node.js Version](https://img.shields.io/node/v/@larksuiteoapi/lark-mcp.svg)](https://nodejs.org/)
+[![npm version](https://img.shields.io/npm/v/lark-mcp-zhiyue.svg)](https://www.npmjs.com/package/lark-mcp-zhiyue)
+[![npm downloads](https://img.shields.io/npm/dm/lark-mcp-zhiyue.svg)](https://www.npmjs.com/package/lark-mcp-zhiyue)
+[![Node.js Version](https://img.shields.io/node/v/lark-mcp-zhiyue.svg)](https://nodejs.org/)
 
 English | [中文](./README_ZH.md)
 
@@ -64,7 +64,7 @@ or add the following to your configuration file:
       "command": "npx",
       "args": [
         "-y",
-        "@larksuiteoapi/lark-mcp",
+        "lark-mcp-zhiyue",
         "mcp",
         "-a",
         "<your_app_id>",
@@ -81,10 +81,10 @@ If you need to access APIs with **user identity**, you need to login first using
 ```bash
 
 # Login and get user access token
-npx -y @larksuiteoapi/lark-mcp login -a cli_xxxx -s yyyyy
+npx -y lark-mcp-zhiyue login -a cli_xxxx -s yyyyy
    
 # Or optionally, login with specific OAuth scope - if not specified, all permissions will be authorized by default
-npx -y @larksuiteoapi/lark-mcp login -a cli_xxxx -s yyyyy --scope offline_access docx:document
+npx -y lark-mcp-zhiyue login -a cli_xxxx -s yyyyy --scope offline_access docx:document
 
 ```
 
@@ -97,7 +97,7 @@ Then add the following to your configuration file:
       "command": "npx",
       "args": [
         "-y",
-        "@larksuiteoapi/lark-mcp",
+        "lark-mcp-zhiyue",
         "mcp",
         "-a",
         "<your_app_id>",
@@ -134,7 +134,7 @@ To switch to the international version of Lark, add the `--domain` parameter in 
       "command": "npx",
       "args": [
         "-y",
-        "@larksuiteoapi/lark-mcp",
+        "lark-mcp-zhiyue",
         "mcp",
         "-a",
         "<your_app_id>",
@@ -154,8 +154,6 @@ To switch to the international version of Lark, add the `--domain` parameter in 
 
 > ⚠️ **File Upload/Download**: File upload and download operations are not yet supported
 
-> ⚠️ **Document Editing**: Direct editing of Feishu cloud documents is not supported (only importing and reading are available)
-
 By default, the MCP service enables common APIs. To enable other tools or only specific APIs or presets, you can specify them using the `-t` parameter in the MCP Client configuration (JSON):
 
 ```json
@@ -165,7 +163,7 @@ By default, the MCP service enables common APIs. To enable other tools or only s
       "command": "npx",
       "args": [
         "-y",
-        "@larksuiteoapi/lark-mcp",
+        "lark-mcp-zhiyue",
         "mcp",
         "-a", "<your_app_id>",
         "-s", "<your_app_secret>",

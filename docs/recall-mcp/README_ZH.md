@@ -1,8 +1,8 @@
 # 飞书/Lark 开放平台开发文档检索 MCP
 
-[![npm version](https://img.shields.io/npm/v/@larksuiteoapi/lark-mcp.svg)](https://www.npmjs.com/package/@larksuiteoapi/lark-mcp)
-[![npm downloads](https://img.shields.io/npm/dm/@larksuiteoapi/lark-mcp.svg)](https://www.npmjs.com/package/@larksuiteoapi/lark-mcp)
-[![Node.js Version](https://img.shields.io/node/v/@larksuiteoapi/lark-mcp.svg)](https://nodejs.org/)
+[![npm version](https://img.shields.io/npm/v/lark-mcp-zhiyue.svg)](https://www.npmjs.com/package/lark-mcp-zhiyue)
+[![npm downloads](https://img.shields.io/npm/dm/lark-mcp-zhiyue.svg)](https://www.npmjs.com/package/lark-mcp-zhiyue)
+[![Node.js Version](https://img.shields.io/node/v/lark-mcp-zhiyue.svg)](https://nodejs.org/)
 
 中文 | [English](./README.md)
 
@@ -59,7 +59,7 @@
 全局安装lark-mcp工具：
 
 ```bash
-npm install -g @larksuiteoapi/lark-mcp
+npm install -g lark-mcp-zhiyue
 ```
 
 ## 使用指南
@@ -80,7 +80,7 @@ npm install -g @larksuiteoapi/lark-mcp
       "command": "npx",
       "args": [
         "-y",
-        "@larksuiteoapi/lark-mcp",
+        "lark-mcp-zhiyue",
         "recall-developer-documents",
       ]
     }

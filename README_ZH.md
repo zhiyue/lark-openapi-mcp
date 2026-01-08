@@ -1,8 +1,8 @@
 # 飞书/Lark OpenAPI MCP
 
-[![npm version](https://img.shields.io/npm/v/@larksuiteoapi/lark-mcp.svg)](https://www.npmjs.com/package/@larksuiteoapi/lark-mcp)
-[![npm downloads](https://img.shields.io/npm/dm/@larksuiteoapi/lark-mcp.svg)](https://www.npmjs.com/package/@larksuiteoapi/lark-mcp)
-[![Node.js Version](https://img.shields.io/node/v/@larksuiteoapi/lark-mcp.svg)](https://nodejs.org/)
+[![npm version](https://img.shields.io/npm/v/lark-mcp-zhiyue.svg)](https://www.npmjs.com/package/lark-mcp-zhiyue)
+[![npm downloads](https://img.shields.io/npm/dm/lark-mcp-zhiyue.svg)](https://www.npmjs.com/package/lark-mcp-zhiyue)
+[![Node.js Version](https://img.shields.io/node/v/lark-mcp-zhiyue.svg)](https://nodejs.org/)
 
 中文 | [English](./README.md) 
 
@@ -64,7 +64,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "@larksuiteoapi/lark-mcp",
+        "lark-mcp-zhiyue",
         "mcp",
         "-a",
         "<your_app_id>",
@@ -83,7 +83,7 @@
 注意需要先在开发者后台配置应用的重定向 URL，默认是 `http://localhost:3000/callback`。
 
 ```bash
-npx -y @larksuiteoapi/lark-mcp login -a cli_xxxx -s yyyyy
+npx -y lark-mcp-zhiyue login -a cli_xxxx -s yyyyy
 ```
 
 然后在 MCP Client 中启用 `--oauth`
@@ -95,7 +95,7 @@ npx -y @larksuiteoapi/lark-mcp login -a cli_xxxx -s yyyyy
       "command": "npx",
       "args": [
         "-y",
-        "@larksuiteoapi/lark-mcp",
+        "lark-mcp-zhiyue",
         "mcp",
         "-a", "<your_app_id>",
         "-s", "<your_app_secret>",
@@ -130,7 +130,7 @@ npx -y @larksuiteoapi/lark-mcp login -a cli_xxxx -s yyyyy
       "command": "npx",
       "args": [
         "-y",
-        "@larksuiteoapi/lark-mcp",
+        "lark-mcp-zhiyue",
         "mcp",
         "-a",
         "<your_app_id>",
@@ -151,8 +151,6 @@ npx -y @larksuiteoapi/lark-mcp login -a cli_xxxx -s yyyyy
 
 > ⚠️ **文件上传下载**：暂不支持文件的上传和下载操作
 
-> ⚠️ **云文档编辑**：暂不支持直接编辑飞书云文档内容（仅支持导入和读取）
-
 默认情况下，MCP 服务启用常用 API。如需启用其他工具或仅启用特定 API 或 preset，推荐在 MCP Client 配置（JSON）中通过 `-t` 指定（用逗号分隔）：
 
 ```json
@@ -162,7 +160,7 @@ npx -y @larksuiteoapi/lark-mcp login -a cli_xxxx -s yyyyy
       "command": "npx",
       "args": [
         "-y",
-        "@larksuiteoapi/lark-mcp",
+        "lark-mcp-zhiyue",
         "mcp",
         "-a", "<your_app_id>",
         "-s", "<your_app_secret>",

@@ -17,7 +17,7 @@ To use a preset, specify it in the `-t` parameter:
       "command": "npx",
       "args": [
         "-y",
-        "@larksuiteoapi/lark-mcp",
+        "lark-mcp-zhiyue",
         "mcp",
         "-a", "<your_app_id>",
         "-s", "<your_app_secret>",
@@ -37,7 +37,7 @@ You can also combine presets with individual tools:
       "command": "npx",
       "args": [
         "-y",
-        "@larksuiteoapi/lark-mcp",
+        "lark-mcp-zhiyue",
         "mcp",
         "-a", "<your_app_id>",
         "-s", "<your_app_secret>",
@@ -70,6 +70,10 @@ You can also combine presets with individual tools:
 | docx.v1.document.rawContent | Get document content | ✓ | ✓ | | | | ✓ | | |
 | docx.builtin.import | Import documents | ✓ | ✓ | | | | ✓ | | |
 | docx.builtin.search | Search documents | ✓ | ✓ | | | | ✓ | | |
+| docx.builtin.updateTitle | Update document title | | ✓ | | | | ✓ | | |
+| docx.builtin.append | Append document content | | ✓ | | | | ✓ | | |
+| docx.builtin.replace | Replace document content | | ✓ | | | | ✓ | | |
+| docx.builtin.edit | Edit document | | ✓ | | | | ✓ | | |
 | drive.v1.permissionMember.create | Add collaborator permissions | | ✓ | | | | ✓ | | |
 | wiki.v2.space.getNode | Get Wiki node | ✓ | ✓ | | | | ✓ | | |
 | wiki.v1.node.search | Search Wiki nodes | | ✓ | | | | ✓ | | |
@@ -104,7 +108,7 @@ Includes basic database operations with BitTable (multi-dimensional tables) for 
 Specialized for batch operations on BitTable data, useful for bulk data processing.
 
 ### preset.doc.default
-Document-focused preset including document reading, importing, searching, and collaboration features.
+Document-focused preset including document reading, importing, searching, editing, and collaboration features.
 
 ### preset.task.default
 Task management focused preset for creating, modifying, and managing tasks with reminders and members.

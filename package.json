@@ -1,5 +1,5 @@
 {
-  "name": "@larksuiteoapi/lark-mcp",
+  "name": "lark-mcp-zhiyue",
   "version": "0.5.1",
   "description": "Feishu/Lark OpenAPI MCP",
   "main": "dist/index.js",

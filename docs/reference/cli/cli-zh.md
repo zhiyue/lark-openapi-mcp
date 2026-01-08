@@ -27,13 +27,13 @@
 
 ```bash
 # 基础登录
-npx -y @larksuiteoapi/lark-mcp login -a cli_xxxx -s your_secret
+npx -y lark-mcp-zhiyue login -a cli_xxxx -s your_secret
 
 # 指定特定的OAuth权限范围登录
-npx -y @larksuiteoapi/lark-mcp login -a cli_xxxx -s your_secret --scope offline_access docx:document
+npx -y lark-mcp-zhiyue login -a cli_xxxx -s your_secret --scope offline_access docx:document
 
 # 使用自定义域名登录（适用于Lark国际版）
-npx -y @larksuiteoapi/lark-mcp login -a cli_xxxx -s your_secret -d https://open.larksuite.com
+npx -y lark-mcp-zhiyue login -a cli_xxxx -s your_secret -d https://open.larksuite.com
 ```
 
 ## lark-mcp logout
@@ -54,10 +54,10 @@ npx -y @larksuiteoapi/lark-mcp login -a cli_xxxx -s your_secret -d https://open.
 
 ```bash
 # 清除特定应用的令牌
-npx -y @larksuiteoapi/lark-mcp logout -a cli_xxxx
+npx -y lark-mcp-zhiyue logout -a cli_xxxx
 
 # 清除所有应用的令牌
-npx -y @larksuiteoapi/lark-mcp logout
+npx -y lark-mcp-zhiyue logout
 ```
 
 ## lark-mcp mcp

@@ -66,7 +66,7 @@ npm -v
       "command": "npx",
       "args": [
         "-y",
-        "@larksuiteoapi/lark-mcp",
+        "lark-mcp-zhiyue",
         "mcp",
         "-a", "your_app_id",
         "-s", "your_app_secret"
@@ -102,7 +102,7 @@ npm -v
 首先需要在命令行中进行 OAuth 认证，获取用户令牌：
 
 ```bash
-npx -y @larksuiteoapi/lark-mcp login -a cli_xxxx -s your_secret
+npx -y lark-mcp-zhiyue login -a cli_xxxx -s your_secret
 ```
 
 这个命令会：
@@ -122,7 +122,7 @@ npx -y @larksuiteoapi/lark-mcp login -a cli_xxxx -s your_secret
     "lark-mcp": {
       "command": "npx",
       "args": [
-        "-y", "@larksuiteoapi/lark-mcp", "mcp",
+        "-y", "lark-mcp-zhiyue", "mcp",
         "-a", "cli_xxxx", "-s", "your_secret",
         "--oauth", "--token-mode", "user_access_token"
       ]
@@ -152,7 +152,7 @@ npx -y @larksuiteoapi/lark-mcp login -a cli_xxxx -s your_secret
 
 ```bash
 # 基础启动命令
-npx -y @larksuiteoapi/lark-mcp mcp \
+npx -y lark-mcp-zhiyue mcp \
   -a cli_xxxx \
   -s your_secret \
   -m streamable \
@@ -187,7 +187,7 @@ npx -y @larksuiteoapi/lark-mcp mcp \
 **启动带 OAuth 的 streamable 服务：**
 
 ```bash
-npx -y @larksuiteoapi/lark-mcp mcp \
+npx -y lark-mcp-zhiyue mcp \
   -a cli_xxxx \
   -s your_secret \
   -m streamable \
@@ -246,7 +246,7 @@ export LARK_TOKEN_MODE=auto
       "command": "npx",
       "args": [
         "-y",
-        "@larksuiteoapi/lark-mcp", 
+        "lark-mcp-zhiyue", 
         "mcp"
       ]
     }
@@ -282,7 +282,7 @@ export LARK_TOKEN_MODE=auto
       "command": "npx",
       "args": [
         "-y",
-        "@larksuiteoapi/lark-mcp",
+        "lark-mcp-zhiyue",
         "mcp",
         "--config", "./config.json"
       ]

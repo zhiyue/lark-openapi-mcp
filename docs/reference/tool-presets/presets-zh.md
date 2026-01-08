@@ -17,7 +17,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "@larksuiteoapi/lark-mcp",
+        "lark-mcp-zhiyue",
         "mcp",
         "-a", "<your_app_id>",
         "-s", "<your_app_secret>",
@@ -37,7 +37,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "@larksuiteoapi/lark-mcp",
+        "lark-mcp-zhiyue",
         "mcp",
         "-a", "<your_app_id>",
         "-s", "<your_app_secret>",
@@ -70,6 +70,10 @@
 | docx.v1.document.rawContent | 获取文档内容 | ✓ | ✓ | | | | ✓ | | |
 | docx.builtin.import | 导入文档 | ✓ | ✓ | | | | ✓ | | |
 | docx.builtin.search | 搜索文档 | ✓ | ✓ | | | | ✓ | | |
+| docx.builtin.updateTitle | 更新文档标题 | | ✓ | | | | ✓ | | |
+| docx.builtin.append | 追加文档内容 | | ✓ | | | | ✓ | | |
+| docx.builtin.replace | 替换文档内容 | | ✓ | | | | ✓ | | |
+| docx.builtin.edit | 编辑文档 | | ✓ | | | | ✓ | | |
 | drive.v1.permissionMember.create | 添加协作者权限 | | ✓ | | | | ✓ | | |
 | wiki.v2.space.getNode | 获取知识库节点 | ✓ | ✓ | | | | ✓ | | |
 | wiki.v1.node.search | 搜索知识库节点 | | ✓ | | | | ✓ | | |
@@ -104,7 +108,7 @@
 专门用于多维表格数据的批量操作，适合批量数据处理。
 
 ### preset.doc.default
-以文档为中心的预设，包括文档读取、导入、搜索和协作功能。
+以文档为中心的预设，包括文档读取、导入、搜索、编辑和协作功能。
 
 ### preset.task.default
 任务管理预设，用于创建、修改和管理带有提醒和成员的任务。

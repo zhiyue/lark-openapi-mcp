@@ -66,7 +66,7 @@ Add the following content to your MCP client configuration file:
       "command": "npx",
       "args": [
         "-y",
-        "@larksuiteoapi/lark-mcp",
+        "lark-mcp-zhiyue",
         "mcp",
         "-a", "your_app_id",
         "-s", "your_app_secret"
@@ -102,7 +102,7 @@ When you need to access user's personal data (such as personal documents, sendin
 First, you need to perform OAuth authentication in the command line to obtain user tokens:
 
 ```bash
-npx -y @larksuiteoapi/lark-mcp login -a cli_xxxx -s your_secret
+npx -y lark-mcp-zhiyue login -a cli_xxxx -s your_secret
 ```
 
 This command will:
@@ -122,7 +122,7 @@ After login is complete, add OAuth-related parameters to the MCP client configur
     "lark-mcp": {
       "command": "npx",
       "args": [
-        "-y", "@larksuiteoapi/lark-mcp", "mcp",
+        "-y", "lark-mcp-zhiyue", "mcp",
         "-a", "cli_xxxx", "-s", "your_secret",
         "--oauth", "--token-mode", "user_access_token"
       ]
@@ -152,7 +152,7 @@ Suitable for team usage, multi-client sharing, or server deployment scenarios, u
 
 ```bash
 # Basic startup command
-npx -y @larksuiteoapi/lark-mcp mcp \
+npx -y lark-mcp-zhiyue mcp \
   -a cli_xxxx \
   -s your_secret \
   -m streamable \
@@ -187,7 +187,7 @@ When you need to use user identity for API calls in service deployment, you can 
 **Start streamable service with OAuth:**
 
 ```bash
-npx -y @larksuiteoapi/lark-mcp mcp \
+npx -y lark-mcp-zhiyue mcp \
   -a cli_xxxx \
   -s your_secret \
   -m streamable \
@@ -246,7 +246,7 @@ export LARK_TOKEN_MODE=auto
       "command": "npx",
       "args": [
         "-y",
-        "@larksuiteoapi/lark-mcp", 
+        "lark-mcp-zhiyue", 
         "mcp"
       ]
     }
@@ -282,7 +282,7 @@ For complex configurations, you can use JSON configuration files:
       "command": "npx",
       "args": [
         "-y",
-        "@larksuiteoapi/lark-mcp",
+        "lark-mcp-zhiyue",
         "mcp",
         "--config", "./config.json"
       ]

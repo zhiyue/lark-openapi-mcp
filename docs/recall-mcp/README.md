@@ -1,8 +1,8 @@
 # Feishu/Lark Open Platform Developer Documentation Retrieval MCP
 
-[![npm version](https://img.shields.io/npm/v/@larksuiteoapi/lark-mcp.svg)](https://www.npmjs.com/package/@larksuiteoapi/lark-mcp)
-[![npm downloads](https://img.shields.io/npm/dm/@larksuiteoapi/lark-mcp.svg)](https://www.npmjs.com/package/@larksuiteoapi/lark-mcp)
-[![Node.js Version](https://img.shields.io/node/v/@larksuiteoapi/lark-mcp.svg)](https://nodejs.org/)
+[![npm version](https://img.shields.io/npm/v/lark-mcp-zhiyue.svg)](https://www.npmjs.com/package/lark-mcp-zhiyue)
+[![npm downloads](https://img.shields.io/npm/dm/lark-mcp-zhiyue.svg)](https://www.npmjs.com/package/lark-mcp-zhiyue)
+[![Node.js Version](https://img.shields.io/node/v/lark-mcp-zhiyue.svg)](https://nodejs.org/)
 
 English | [中文](./README_ZH.md)
 
@@ -59,7 +59,7 @@ Before using the lark-mcp tool, you need to install the Node.js environment. If 
 Install the lark-mcp tool globally:
 
 ```bash
-npm install -g @larksuiteoapi/lark-mcp
+npm install -g lark-mcp-zhiyue
 ```
 
 ## User Guide
@@ -80,7 +80,7 @@ or you can add the following to your configuration file:
       "command": "npx",
       "args": [
         "-y",
-        "@larksuiteoapi/lark-mcp",
+        "lark-mcp-zhiyue",
         "recall-developer-documents",
       ]
     }

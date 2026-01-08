@@ -36,7 +36,7 @@ Solutions:
 ### Permission errors during installation
 
 Solutions:
-- macOS/Linux: Use `sudo npm install -g @larksuiteoapi/lark-mcp` or adjust npm global path permissions.
+- macOS/Linux: Use `sudo npm install -g lark-mcp-zhiyue` or adjust npm global path permissions.
 - Windows: Try running Command Prompt as administrator.
 
 ### Token limit exceeded prompt after starting MCP service

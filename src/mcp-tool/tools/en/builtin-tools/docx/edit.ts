@@ -11,6 +11,7 @@ import {
   TextElement,
   TextContent,
   CODE_LANGUAGE_MAP,
+  extractErrorMessage,
 } from '../../../../utils';
 
 // Tool name type
@@ -223,7 +224,7 @@ export const larkDocxUpdateTitleTool: McpTool = {
             type: 'text' as const,
             text: JSON.stringify({
               success: false,
-              error: (error as any)?.response?.data || (error as any)?.message || error,
+              error: extractErrorMessage(error),
             }),
           },
         ],
@@ -363,7 +364,7 @@ export const larkDocxAppendTool: McpTool = {
             type: 'text' as const,
             text: JSON.stringify({
               success: false,
-              error: (error as any)?.response?.data || (error as any)?.message || error,
+              error: extractErrorMessage(error),
             }),
           },
         ],
@@ -529,7 +530,7 @@ export const larkDocxReplaceTool: McpTool = {
             type: 'text' as const,
             text: JSON.stringify({
               success: false,
-              error: (error as any)?.response?.data || (error as any)?.message || error,
+              error: extractErrorMessage(error),
             }),
           },
         ],
@@ -770,7 +771,7 @@ export const larkDocxEditTool: McpTool = {
             type: 'text' as const,
             text: JSON.stringify({
               success: false,
-              error: (error as any)?.response?.data || (error as any)?.message || error,
+              error: extractErrorMessage(error),
             }),
           },
         ],

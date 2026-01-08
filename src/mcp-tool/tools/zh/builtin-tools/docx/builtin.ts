@@ -4,6 +4,7 @@ import { ReadStream } from 'fs';
 import { Readable } from 'stream';
 import { z } from 'zod';
 import { docxEditToolName, docxEditTools } from './edit';
+import { extractErrorMessage } from '../../../../utils';
 
 // 工具名称类型
 export type docxBuiltinToolName = 'docx.builtin.search' | 'docx.builtin.import' | docxEditToolName;
@@ -70,7 +71,7 @@ export const larkDocxBuiltinSearchTool: McpTool = {
             type: 'text' as const,
             text: JSON.stringify({
               success: false,
-              error: (error as any)?.response?.data || (error as any)?.message || error,
+              error: extractErrorMessage(error),
             }),
           },
         ],
@@ -180,7 +181,10 @@ export const larkDocxBuiltinImportTool: McpTool = {
         content: [
           {
             type: 'text' as const,
-            text: JSON.stringify((error as any)?.response?.data || error),
+            text: JSON.stringify({
+              success: false,
+              error: extractErrorMessage(error),
+            }),
           },
         ],
       };

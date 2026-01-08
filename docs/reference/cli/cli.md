@@ -27,13 +27,13 @@ The `lark-mcp login` command is used to authenticate with user identity and obta
 
 ```bash
 # Basic login
-npx -y @larksuiteoapi/lark-mcp login -a cli_xxxx -s your_secret
+npx -y lark-mcp-zhiyue login -a cli_xxxx -s your_secret
 
 # Login with specific OAuth scope
-npx -y @larksuiteoapi/lark-mcp login -a cli_xxxx -s your_secret --scope offline_access docx:document
+npx -y lark-mcp-zhiyue login -a cli_xxxx -s your_secret --scope offline_access docx:document
 
 # Login with custom domain (for Lark international)
-npx -y @larksuiteoapi/lark-mcp login -a cli_xxxx -s your_secret -d https://open.larksuite.com
+npx -y lark-mcp-zhiyue login -a cli_xxxx -s your_secret -d https://open.larksuite.com
 ```
 
 ## lark-mcp logout
@@ -54,10 +54,10 @@ This command is used to clear locally stored user access tokens. If the `--app-i
 
 ```bash
 # Clear tokens for a specific app
-npx -y @larksuiteoapi/lark-mcp logout -a cli_xxxx
+npx -y lark-mcp-zhiyue logout -a cli_xxxx
 
 # Clear tokens for all apps
-npx -y @larksuiteoapi/lark-mcp logout
+npx -y lark-mcp-zhiyue logout
 ```
 
 ## lark-mcp mcp

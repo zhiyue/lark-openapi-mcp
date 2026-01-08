@@ -25,7 +25,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 ## Install lark-mcp globally (will install keytar as dependency)
-RUN npm install -g @larksuiteoapi/lark-mcp@latest \
+RUN npm install -g lark-mcp-zhiyue@latest \
   && npm cache clean --force
 
 ## Prepare XDG and user-writable dirs before dropping privileges
