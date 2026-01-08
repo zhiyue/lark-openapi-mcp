@@ -3,9 +3,10 @@ import * as lark from '@larksuiteoapi/node-sdk';
 import { ReadStream } from 'fs';
 import { Readable } from 'stream';
 import { z } from 'zod';
+import { docxEditToolName, docxEditTools } from './edit';
 
 // Tool name type
-export type docxBuiltinToolName = 'docx.builtin.search' | 'docx.builtin.import';
+export type docxBuiltinToolName = 'docx.builtin.search' | 'docx.builtin.import' | docxEditToolName;
 
 export const larkDocxBuiltinSearchTool: McpTool = {
   project: 'docx',
@@ -205,4 +206,4 @@ export const larkDocxBuiltinImportTool: McpTool = {
   },
 };
 
-export const docxBuiltinTools = [larkDocxBuiltinSearchTool, larkDocxBuiltinImportTool];
+export const docxBuiltinTools = [larkDocxBuiltinSearchTool, larkDocxBuiltinImportTool, ...docxEditTools];
