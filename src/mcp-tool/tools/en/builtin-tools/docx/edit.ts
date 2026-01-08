@@ -1,6 +1,7 @@
 import { McpTool } from '../../../../types';
 import * as lark from '@larksuiteoapi/node-sdk';
 import { z } from 'zod';
+import { CallToolResult } from '@modelcontextprotocol/sdk/types';
 
 // Tool name type
 export type docxEditToolName =
@@ -8,6 +9,80 @@ export type docxEditToolName =
   | 'docx.builtin.append'
   | 'docx.builtin.replace'
   | 'docx.builtin.edit';
+
+// ============ Type Definitions ============
+
+/** Text element style */
+interface TextElementStyle {
+  bold?: boolean;
+  italic?: boolean;
+  strikethrough?: boolean;
+  underline?: boolean;
+  inline_code?: boolean;
+  background_color?: number;
+  text_color?: number;
+  link?: { url: string };
+}
+
+/** Text element */
+interface TextElement {
+  text_run?: {
+    content: string;
+    text_element_style?: TextElementStyle;
+  };
+  mention_user?: {
+    user_id: string;
+    text_element_style?: TextElementStyle;
+  };
+}
+
+/** Text block style */
+interface TextStyle {
+  align?: number;
+  done?: boolean;
+  folded?: boolean;
+  language?: number;
+  wrap?: boolean;
+}
+
+/** Text block content */
+interface TextContent {
+  style?: TextStyle;
+  elements: TextElement[];
+}
+
+/** Code block content */
+interface CodeContent {
+  style?: {
+    language?: number;
+    wrap?: boolean;
+  };
+  elements: TextElement[];
+}
+
+/** Document block type */
+interface DocumentBlock {
+  block_type: number;
+  text?: TextContent;
+  code?: CodeContent;
+}
+
+/** Block list item (API response) */
+interface BlockItem {
+  block_id?: string;
+  parent_id?: string;
+  block_type?: number;
+  text?: TextContent;
+  code?: CodeContent;
+}
+
+/** Update request */
+interface UpdateRequest {
+  block_id: string;
+  update_text_elements: {
+    elements: TextElement[];
+  };
+}
 
 /**
  * Helper function: Extract document_id from URL or direct ID
@@ -30,7 +105,7 @@ function extractDocumentId(documentIdOrUrl: string): string {
 /**
  * Helper function: Convert simple text to document block structure
  */
-function textToBlock(text: string, blockType: number = 2) {
+function textToBlock(text: string, blockType: number = 2): DocumentBlock {
   return {
     block_type: blockType,
     text: {
@@ -48,9 +123,9 @@ function textToBlock(text: string, blockType: number = 2) {
 /**
  * Helper function: Convert Markdown to document block array
  */
-function markdownToBlocks(markdown: string): any[] {
+function markdownToBlocks(markdown: string): DocumentBlock[] {
   const lines = markdown.split('\n');
-  const blocks: any[] = [];
+  const blocks: DocumentBlock[] = [];
   let codeBlock: string[] | null = null;
   let codeLanguage = 1; // PlainText
 
@@ -300,7 +375,7 @@ export const larkDocxUpdateTitleTool: McpTool = {
     }),
     useUAT: z.boolean().describe('Use user identity for the request, otherwise use application identity').optional(),
   },
-  customHandler: async (client, params, options): Promise<any> => {
+  customHandler: async (client, params, options): Promise<CallToolResult> => {
     try {
       const { userAccessToken } = options || {};
       const documentId = extractDocumentId(params.data.document_id);
@@ -409,12 +484,12 @@ export const larkDocxAppendTool: McpTool = {
     }),
     useUAT: z.boolean().describe('Use user identity for the request, otherwise use application identity').optional(),
   },
-  customHandler: async (client, params, options): Promise<any> => {
+  customHandler: async (client, params, options): Promise<CallToolResult> => {
     try {
       const { userAccessToken } = options || {};
       const documentId = extractDocumentId(params.data.document_id);
 
-      let children: any[];
+      let children: DocumentBlock[];
 
       if (params.data.block_type === 'auto') {
         // Auto parse Markdown
@@ -574,7 +649,7 @@ export const larkDocxReplaceTool: McpTool = {
     }),
     useUAT: z.boolean().describe('Use user identity for the request, otherwise use application identity').optional(),
   },
-  customHandler: async (client, params, options): Promise<any> => {
+  customHandler: async (client, params, options): Promise<CallToolResult> => {
     try {
       const { userAccessToken } = options || {};
       const documentId = extractDocumentId(params.data.document_id);
@@ -596,7 +671,7 @@ export const larkDocxReplaceTool: McpTool = {
             });
 
       const items = blocksResponse.data?.items || [];
-      const updateRequests: any[] = [];
+      const updateRequests: UpdateRequest[] = [];
       let replacedCount = 0;
 
       for (const block of items) {
@@ -608,15 +683,20 @@ export const larkDocxReplaceTool: McpTool = {
         // Get block text content
         const textContent = block.text?.elements || block.code?.elements || [];
         let hasMatch = false;
-        const newElements: any[] = [];
+        const newElements: TextElement[] = [];
 
         for (const element of textContent) {
           if (element.text_run?.content) {
             const content = element.text_run.content;
             if (content.includes(search_text)) {
               hasMatch = true;
-              const newContent = replace_all ? content.split(search_text).join(replace_text) : content.replace(search_text, replace_text);
-              replacedCount += (content.match(new RegExp(search_text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+              const newContent = replace_all
+                ? content.split(search_text).join(replace_text)
+                : content.replace(search_text, replace_text);
+              // Correctly count replacements: count all matches when replace_all, otherwise count 1
+              const escapedText = search_text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const matches = content.match(new RegExp(escapedText, 'g')) || [];
+              replacedCount += replace_all ? matches.length : (matches.length > 0 ? 1 : 0);
               newElements.push({
                 text_run: {
                   content: newContent,
@@ -737,7 +817,7 @@ export const larkDocxEditTool: McpTool = {
     }),
     useUAT: z.boolean().describe('Use user identity for the request, otherwise use application identity').optional(),
   },
-  customHandler: async (client, params, options): Promise<any> => {
+  customHandler: async (client, params, options): Promise<CallToolResult> => {
     try {
       const { userAccessToken } = options || {};
       const documentId = extractDocumentId(params.data.document_id);
@@ -760,7 +840,7 @@ export const larkDocxEditTool: McpTool = {
         };
       }
 
-      let response: any;
+      let response: { data?: unknown } | undefined;
 
       switch (mode) {
         case 'append': {
@@ -869,7 +949,7 @@ export const larkDocxEditTool: McpTool = {
                 });
 
           const children = childrenResponse.data?.items || [];
-          const blockIndex = children.findIndex((c: any) => c.block_id === block_id);
+          const blockIndex = children.findIndex((c: BlockItem) => c.block_id === block_id);
 
           // Delete original block and get new document_revision_id
           const deleteResponse = await (userAccessToken && params.useUAT

@@ -690,8 +690,13 @@ export const larkDocxReplaceTool: McpTool = {
             const content = element.text_run.content;
             if (content.includes(search_text)) {
               hasMatch = true;
-              const newContent = replace_all ? content.split(search_text).join(replace_text) : content.replace(search_text, replace_text);
-              replacedCount += (content.match(new RegExp(search_text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+              const newContent = replace_all
+                ? content.split(search_text).join(replace_text)
+                : content.replace(search_text, replace_text);
+              // 正确计算替换数量：replace_all 时计算所有匹配，否则只计 1
+              const escapedText = search_text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const matches = content.match(new RegExp(escapedText, 'g')) || [];
+              replacedCount += replace_all ? matches.length : (matches.length > 0 ? 1 : 0);
               newElements.push({
                 text_run: {
                   content: newContent,
