@@ -709,6 +709,18 @@ function collectImagePlaceholders(
         const alreadyRecorded = result.some((p) => p.path.length === currentPath.length && p.path.every((v, j) => v === currentPath[j]));
         if (!alreadyRecorded && block.image.caption?.content) {
           // 从 caption 中提取 URL（如果有的话）
+          const captionContent = block.image.caption.content;
+          // 尝试匹配 Markdown 图片格式 ![alt](url)
+          const mdImageMatch = captionContent.match(/!\[([^\]]*)\]\(([^)]+)\)/);
+          if (mdImageMatch) {
+            result.push({ path: currentPath, url: mdImageMatch[2], alt: mdImageMatch[1] });
+          } else {
+            // 尝试匹配纯 URL 格式
+            const urlMatch = captionContent.match(/^(https?:\/\/[^\s]+)$/);
+            if (urlMatch) {
+              result.push({ path: currentPath, url: urlMatch[1], alt: '' });
+            }
+          }
         }
       }
 
