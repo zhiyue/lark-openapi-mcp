@@ -347,6 +347,22 @@ export const larkDocxReplaceTool: McpTool = {
       const documentId = extractDocumentId(params.data.document_id);
       const { search_text, replace_text, block_id, replace_all } = params.data;
 
+      // 验证 search_text 不为空
+      if (!search_text) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify({
+                success: false,
+                message: 'search_text 不能为空',
+              }),
+            },
+          ],
+        };
+      }
+
       // 获取文档所有块
       const items = await getAllDocumentBlocks(client, documentId, userAccessToken, params.useUAT);
       const updateRequests: UpdateRequest[] = [];

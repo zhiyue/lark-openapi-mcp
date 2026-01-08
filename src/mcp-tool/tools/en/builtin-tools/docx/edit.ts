@@ -2,7 +2,16 @@ import { McpTool } from '../../../../types';
 import * as lark from '@larksuiteoapi/node-sdk';
 import { z } from 'zod';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types';
-import { extractDocumentId, BlockType } from '../../../../utils';
+import {
+  extractDocumentId,
+  BlockType,
+  markdownToBlocks,
+  textToBlock,
+  DocumentBlock,
+  TextElement,
+  TextContent,
+  CODE_LANGUAGE_MAP,
+} from '../../../../utils';
 
 // Tool name type
 export type docxEditToolName =
@@ -11,82 +20,7 @@ export type docxEditToolName =
   | 'docx.builtin.replace'
   | 'docx.builtin.edit';
 
-// ============ Type Definitions ============
-
-/** Text element style */
-interface TextElementStyle {
-  bold?: boolean;
-  italic?: boolean;
-  strikethrough?: boolean;
-  underline?: boolean;
-  inline_code?: boolean;
-  background_color?: number;
-  text_color?: number;
-  link?: { url: string };
-}
-
-/** Text element */
-interface TextElement {
-  text_run?: {
-    content: string;
-    text_element_style?: TextElementStyle;
-  };
-  mention_user?: {
-    user_id: string;
-    text_element_style?: TextElementStyle;
-  };
-}
-
-/** Text block style */
-interface TextStyle {
-  align?: number;
-  done?: boolean;
-  folded?: boolean;
-  language?: number;
-  wrap?: boolean;
-}
-
-/** Text block content */
-interface TextContent {
-  style?: TextStyle;
-  elements: TextElement[];
-}
-
-/** Code block content */
-interface CodeContent {
-  style?: {
-    language?: number;
-    wrap?: boolean;
-  };
-  elements: TextElement[];
-}
-
-/** Image block content */
-interface ImageContent {
-  align?: number;
-  caption?: { content?: string };
-  token?: string;
-  width?: number;
-  height?: number;
-}
-
-/** Table block content */
-interface TableContent {
-  property: {
-    row_size: number;
-    column_size: number;
-  };
-  cells?: DocumentBlock[];
-}
-
-/** Document block type */
-interface DocumentBlock {
-  block_type: number;
-  text?: TextContent;
-  code?: CodeContent;
-  image?: ImageContent;
-  table?: TableContent;
-}
+// ============ Local Type Definitions (API Response Types) ============
 
 /** Block list item (API response) */
 interface BlockItem {
@@ -94,7 +28,10 @@ interface BlockItem {
   parent_id?: string;
   block_type?: number;
   text?: TextContent;
-  code?: CodeContent;
+  code?: {
+    style?: { language?: number; wrap?: boolean };
+    elements: TextElement[];
+  };
 }
 
 /** Update request */
@@ -194,482 +131,7 @@ async function getAllBlockChildren(
   return allItems;
 }
 
-/**
- * Helper function: Parse inline Markdown styles
- * Supports: **bold**, *italic*, ~~strikethrough~~, `code`, [link](url)
- */
-function parseInlineMarkdown(text: string): TextElement[] {
-  const elements: TextElement[] = [];
-
-  // Regex patterns for various inline styles
-  // Order matters: match complex patterns (like links) first
-  const patterns = [
-    // Link: [text](url)
-    { regex: /\[([^\]]+)\]\(([^)]+)\)/g, type: 'link' },
-    // Bold italic: ***text*** or ___text___
-    { regex: /\*\*\*([^*]+)\*\*\*|___([^_]+)___/g, type: 'bold_italic' },
-    // Bold: **text** or __text__
-    { regex: /\*\*([^*]+)\*\*|__([^_]+)__/g, type: 'bold' },
-    // Italic: *text* or _text_ (avoid matching ** or __)
-    { regex: /(?<!\*)\*([^*]+)\*(?!\*)|(?<!_)_([^_]+)_(?!_)/g, type: 'italic' },
-    // Strikethrough: ~~text~~
-    { regex: /~~([^~]+)~~/g, type: 'strikethrough' },
-    // Inline code: `code`
-    { regex: /`([^`]+)`/g, type: 'inline_code' },
-  ];
-
-  // Track processed intervals
-  interface Match {
-    start: number;
-    end: number;
-    type: string;
-    text: string;
-    url?: string;
-  }
-  const matches: Match[] = [];
-
-  // Collect all matches
-  for (const pattern of patterns) {
-    let match;
-    const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
-    while ((match = regex.exec(text)) !== null) {
-      const start = match.index;
-      const end = match.index + match[0].length;
-
-      // Check for overlap with existing matches
-      const overlaps = matches.some((m) => (start >= m.start && start < m.end) || (end > m.start && end <= m.end));
-
-      if (!overlaps) {
-        if (pattern.type === 'link') {
-          matches.push({
-            start,
-            end,
-            type: pattern.type,
-            text: match[1],
-            url: match[2],
-          });
-        } else if (pattern.type === 'bold_italic') {
-          matches.push({
-            start,
-            end,
-            type: pattern.type,
-            text: match[1] || match[2],
-          });
-        } else {
-          matches.push({
-            start,
-            end,
-            type: pattern.type,
-            text: match[1] || match[2],
-          });
-        }
-      }
-    }
-  }
-
-  // Sort by position
-  matches.sort((a, b) => a.start - b.start);
-
-  // If no matches, return plain text
-  if (matches.length === 0) {
-    return [{ text_run: { content: text } }];
-  }
-
-  // Build element list
-  let lastEnd = 0;
-  for (const match of matches) {
-    // Add plain text before the match
-    if (match.start > lastEnd) {
-      elements.push({
-        text_run: { content: text.slice(lastEnd, match.start) },
-      });
-    }
-
-    // Add styled text
-    const style: TextElementStyle = {};
-    switch (match.type) {
-      case 'bold':
-        style.bold = true;
-        break;
-      case 'italic':
-        style.italic = true;
-        break;
-      case 'bold_italic':
-        style.bold = true;
-        style.italic = true;
-        break;
-      case 'strikethrough':
-        style.strikethrough = true;
-        break;
-      case 'inline_code':
-        style.inline_code = true;
-        break;
-      case 'link':
-        style.link = { url: match.url || '' };
-        break;
-    }
-
-    elements.push({
-      text_run: {
-        content: match.text,
-        text_element_style: style,
-      },
-    });
-
-    lastEnd = match.end;
-  }
-
-  // Add remaining plain text
-  if (lastEnd < text.length) {
-    elements.push({
-      text_run: { content: text.slice(lastEnd) },
-    });
-  }
-
-  return elements;
-}
-
-/**
- * Helper function: Convert simple text to document block structure (supports inline Markdown styles)
- */
-function textToBlock(text: string, blockType: number = BlockType.Text): DocumentBlock {
-  return {
-    block_type: blockType,
-    text: {
-      elements: parseInlineMarkdown(text),
-    },
-  };
-}
-
-/**
- * Helper function: Parse Markdown table row
- */
-function parseTableRow(line: string): string[] {
-  // Remove leading/trailing |, then split by |
-  const trimmed = line.trim();
-  const content = trimmed.startsWith('|') ? trimmed.slice(1) : trimmed;
-  const withoutEnd = content.endsWith('|') ? content.slice(0, -1) : content;
-  return withoutEnd.split('|').map((cell) => cell.trim());
-}
-
-/**
- * Helper function: Check if line is a table separator (e.g., |---|---|)
- */
-function isTableSeparator(line: string): boolean {
-  return /^\|?[\s\-:|]+\|?$/.test(line.trim());
-}
-
-/**
- * Helper function: Convert table data to table block
- */
-function tableToBlock(tableRows: string[][]): DocumentBlock {
-  const rowSize = tableRows.length;
-  const columnSize = Math.max(...tableRows.map((row) => row.length));
-
-  // Create cell content blocks
-  const cells: DocumentBlock[] = [];
-  for (const row of tableRows) {
-    for (let col = 0; col < columnSize; col++) {
-      const cellContent = row[col] || '';
-      cells.push({
-        block_type: BlockType.Text,
-        text: {
-          elements: parseInlineMarkdown(cellContent),
-        },
-      });
-    }
-  }
-
-  return {
-    block_type: BlockType.Table,
-    table: {
-      property: {
-        row_size: rowSize,
-        column_size: columnSize,
-      },
-      cells,
-    },
-  };
-}
-
-/**
- * Helper function: Convert Markdown to document block array
- */
-function markdownToBlocks(markdown: string): DocumentBlock[] {
-  const lines = markdown.split('\n');
-  const blocks: DocumentBlock[] = [];
-  let codeBlock: string[] | null = null;
-  let codeLanguage = 1; // PlainText
-  let tableRows: string[][] | null = null; // Table row accumulator
-
-  const languageMap: Record<string, number> = {
-    plaintext: 1,
-    abap: 2,
-    ada: 3,
-    apache: 4,
-    apex: 5,
-    assembly: 6,
-    bash: 7,
-    csharp: 8,
-    'c++': 9,
-    cpp: 9,
-    c: 10,
-    cobol: 11,
-    css: 12,
-    coffeescript: 13,
-    d: 14,
-    dart: 15,
-    delphi: 16,
-    django: 17,
-    dockerfile: 18,
-    erlang: 19,
-    fortran: 20,
-    go: 22,
-    groovy: 23,
-    html: 24,
-    http: 26,
-    haskell: 27,
-    json: 28,
-    java: 29,
-    javascript: 30,
-    js: 30,
-    julia: 31,
-    kotlin: 32,
-    latex: 33,
-    lisp: 34,
-    lua: 36,
-    matlab: 37,
-    makefile: 38,
-    markdown: 39,
-    nginx: 40,
-    'objective-c': 41,
-    objc: 41,
-    php: 43,
-    perl: 44,
-    powershell: 46,
-    prolog: 47,
-    protobuf: 48,
-    python: 49,
-    py: 49,
-    r: 50,
-    ruby: 52,
-    rust: 53,
-    sas: 54,
-    scss: 55,
-    sql: 56,
-    scala: 57,
-    scheme: 58,
-    shell: 60,
-    swift: 61,
-    thrift: 62,
-    typescript: 63,
-    ts: 63,
-    vbscript: 64,
-    vb: 65,
-    xml: 66,
-    yaml: 67,
-    yml: 67,
-    cmake: 68,
-    diff: 69,
-    graphql: 71,
-    toml: 75,
-  };
-
-  for (const line of lines) {
-    // Handle code blocks
-    if (line.startsWith('```')) {
-      if (codeBlock === null) {
-        // Start code block
-        codeBlock = [];
-        const lang = line.slice(3).trim().toLowerCase();
-        codeLanguage = languageMap[lang] || 1;
-      } else {
-        // End code block
-        blocks.push({
-          block_type: BlockType.Code,
-          code: {
-            style: {
-              language: codeLanguage,
-              wrap: false,
-            },
-            elements: [
-              {
-                text_run: {
-                  content: codeBlock.join('\n'),
-                },
-              },
-            ],
-          },
-        });
-        codeBlock = null;
-      }
-      continue;
-    }
-
-    if (codeBlock !== null) {
-      codeBlock.push(line);
-      continue;
-    }
-
-    // Handle tables
-    const isTableLine = line.trim().startsWith('|') || (tableRows !== null && line.includes('|'));
-    if (isTableLine) {
-      // Skip separator lines (e.g., |---|---|)
-      if (isTableSeparator(line)) {
-        continue;
-      }
-      if (tableRows === null) {
-        tableRows = [];
-      }
-      tableRows.push(parseTableRow(line));
-      continue;
-    } else if (tableRows !== null) {
-      // Table ended, generate table block
-      if (tableRows.length > 0) {
-        blocks.push(tableToBlock(tableRows));
-      }
-      tableRows = null;
-    }
-
-    // Skip empty lines
-    if (line.trim() === '') {
-      continue;
-    }
-
-    // Handle headings
-    const h1Match = line.match(/^# (.+)$/);
-    if (h1Match) {
-      blocks.push(textToBlock(h1Match[1], BlockType.Heading1));
-      continue;
-    }
-
-    const h2Match = line.match(/^## (.+)$/);
-    if (h2Match) {
-      blocks.push(textToBlock(h2Match[1], BlockType.Heading2));
-      continue;
-    }
-
-    const h3Match = line.match(/^### (.+)$/);
-    if (h3Match) {
-      blocks.push(textToBlock(h3Match[1], BlockType.Heading3));
-      continue;
-    }
-
-    const h4Match = line.match(/^#### (.+)$/);
-    if (h4Match) {
-      blocks.push(textToBlock(h4Match[1], BlockType.Heading4));
-      continue;
-    }
-
-    const h5Match = line.match(/^##### (.+)$/);
-    if (h5Match) {
-      blocks.push(textToBlock(h5Match[1], BlockType.Heading5));
-      continue;
-    }
-
-    const h6Match = line.match(/^###### (.+)$/);
-    if (h6Match) {
-      blocks.push(textToBlock(h6Match[1], BlockType.Heading6));
-      continue;
-    }
-
-    // Handle unordered list
-    const bulletMatch = line.match(/^[-*+] (.+)$/);
-    if (bulletMatch) {
-      blocks.push(textToBlock(bulletMatch[1], BlockType.Bullet));
-      continue;
-    }
-
-    // Handle ordered list
-    const orderedMatch = line.match(/^\d+\. (.+)$/);
-    if (orderedMatch) {
-      blocks.push(textToBlock(orderedMatch[1], BlockType.Ordered));
-      continue;
-    }
-
-    // Handle quote
-    const quoteMatch = line.match(/^> (.+)$/);
-    if (quoteMatch) {
-      blocks.push(textToBlock(quoteMatch[1], BlockType.Quote));
-      continue;
-    }
-
-    // Handle todo items
-    const todoUncheckedMatch = line.match(/^- \[ \] (.+)$/);
-    if (todoUncheckedMatch) {
-      blocks.push({
-        block_type: BlockType.Todo,
-        text: {
-          style: { done: false },
-          elements: [{ text_run: { content: todoUncheckedMatch[1] } }],
-        },
-      });
-      continue;
-    }
-
-    const todoCheckedMatch = line.match(/^- \[x\] (.+)$/i);
-    if (todoCheckedMatch) {
-      blocks.push({
-        block_type: BlockType.Todo,
-        text: {
-          style: { done: true },
-          elements: [{ text_run: { content: todoCheckedMatch[1] } }],
-        },
-      });
-      continue;
-    }
-
-    // Handle divider
-    if (/^[-*_]{3,}$/.test(line.trim())) {
-      blocks.push({ block_type: BlockType.Divider });
-      continue;
-    }
-
-    // Handle image: ![alt](url)
-    const imageMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
-    if (imageMatch) {
-      // Note: Feishu image blocks require uploading image first to get token
-      // This creates a placeholder block; actual usage requires uploading image separately
-      blocks.push({
-        block_type: BlockType.Image,
-        image: {
-          caption: imageMatch[1] ? { content: imageMatch[1] } : undefined,
-        },
-      });
-      continue;
-    }
-
-    // Default to plain text
-    blocks.push(textToBlock(line, BlockType.Text));
-  }
-
-  // Handle unclosed code block
-  if (codeBlock !== null) {
-    blocks.push({
-      block_type: BlockType.Code,
-      code: {
-        style: {
-          language: codeLanguage,
-          wrap: false,
-        },
-        elements: [
-          {
-            text_run: {
-              content: codeBlock.join('\n'),
-            },
-          },
-        ],
-      },
-    });
-  }
-
-  // Handle unclosed table
-  if (tableRows !== null && tableRows.length > 0) {
-    blocks.push(tableToBlock(tableRows));
-  }
-
-  return blocks;
-}
+// ============ Tool Definitions ============
 
 /**
  * Update document title
@@ -827,25 +289,7 @@ export const larkDocxAppendTool: McpTool = {
           children = [{ block_type: BlockType.Divider }];
         } else if (blockType === BlockType.Code) {
           // Code block
-          const languageMap: Record<string, number> = {
-            javascript: 30,
-            js: 30,
-            typescript: 63,
-            ts: 63,
-            python: 49,
-            py: 49,
-            go: 22,
-            java: 29,
-            rust: 53,
-            cpp: 9,
-            c: 10,
-            sql: 56,
-            json: 28,
-            yaml: 67,
-            shell: 60,
-            bash: 7,
-          };
-          const language = languageMap[(params.data.code_language || '').toLowerCase()] || 1;
+          const language = CODE_LANGUAGE_MAP[(params.data.code_language || '').toLowerCase()] || 1;
           children = [
             {
               block_type: BlockType.Code,
@@ -952,6 +396,22 @@ export const larkDocxReplaceTool: McpTool = {
       const { userAccessToken } = options || {};
       const documentId = extractDocumentId(params.data.document_id);
       const { search_text, replace_text, block_id, replace_all } = params.data;
+
+      // Validate search_text is not empty
+      if (!search_text) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify({
+                success: false,
+                message: 'search_text cannot be empty',
+              }),
+            },
+          ],
+        };
+      }
 
       // Get all document blocks (with pagination)
       const items = await getAllDocumentBlocks(client, documentId, userAccessToken, params.useUAT);
