@@ -51,8 +51,8 @@ npm -v
 
 点击对应的按钮，在弹出窗口中填入你的 App ID 和 App Secret：
 
-[![Install MCP Server](https://cursor.com/deeplink/mcp-install-light.svg)](https://cursor.com/install-mcp?name=lark-mcp&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIkBsYXJrc3VpdGVvYXBpL2xhcmstbWNwIiwibWNwIiwiLWEiLCJ5b3VyX2FwcF9pZCIsIi1zIiwieW91cl9hcHBfc2VjcmV0Il19)
-[![Install MCP Server](../../../assets/trae-cn.svg)](trae-cn://trae.ai-ide/mcp-import?source=lark&type=stdio&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIkBsYXJrc3VpdGVvYXBpL2xhcmstbWNwIiwibWNwIiwiLWEiLCJ5b3VyX2FwcF9pZCIsIi1zIiwieW91cl9hcHBfc2VjcmV0Il19)  [![Install MCP Server](../../../assets/trae.svg)](trae://trae.ai-ide/mcp-import?source=lark&type=stdio&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIkBsYXJrc3VpdGVvYXBpL2xhcmstbWNwIiwibWNwIiwiLWEiLCJ5b3VyX2FwcF9pZCIsIi1zIiwieW91cl9hcHBfc2VjcmV0Il19)
+[![Install MCP Server](https://cursor.com/deeplink/mcp-install-light.svg)](https://cursor.com/install-mcp?name=lark-mcp&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImxhcmstbWNwLXpoaXl1ZSIsIm1jcCIsIi1hIiwieW91cl9hcHBfaWQiLCItcyIsInlvdXJfYXBwX3NlY3JldCJdfQ==)
+[![Install MCP Server](../../../assets/trae-cn.svg)](trae-cn://trae.ai-ide/mcp-import?source=lark&type=stdio&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImxhcmstbWNwLXpoaXl1ZSIsIm1jcCIsIi1hIiwieW91cl9hcHBfaWQiLCItcyIsInlvdXJfYXBwX3NlY3JldCJdfQ==)  [![Install MCP Server](../../../assets/trae.svg)](trae://trae.ai-ide/mcp-import?source=lark&type=stdio&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImxhcmstbWNwLXpoaXl1ZSIsIm1jcCIsIi1hIiwieW91cl9hcHBfaWQiLCItcyIsInlvdXJfYXBwX3NlY3JldCJdfQ==)
 
 
 **方式二：手动配置 JSON**

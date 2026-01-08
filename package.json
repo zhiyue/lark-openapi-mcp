@@ -36,7 +36,7 @@
     "open-api",
     "ai"
   ],
-  "homepage": "https://github.com/larksuite/lark-openapi-mcp",
+  "homepage": "https://github.com/zhiyue/lark-openapi-mcp",
   "engines": {
     "node": ">=20.0.0"
   },

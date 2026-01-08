@@ -51,8 +51,8 @@ Suitable for most individual users, using app identity to access APIs with simpl
 
 Click the corresponding button and fill in your App ID and App Secret in the popup window:
 
-[![Install MCP Server](https://cursor.com/deeplink/mcp-install-light.svg)](https://cursor.com/install-mcp?name=lark-mcp&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIkBsYXJrc3VpdGVvYXBpL2xhcmstbWNwIiwibWNwIiwiLWEiLCJ5b3VyX2FwcF9pZCIsIi1zIiwieW91cl9hcHBfc2VjcmV0Il19)
-[![Install MCP Server](../../../assets/trae-cn.svg)](trae-cn://trae.ai-ide/mcp-import?source=lark&type=stdio&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIkBsYXJrc3VpdGVvYXBpL2xhcmstbWNwIiwibWNwIiwiLWEiLCJ5b3VyX2FwcF9pZCIsIi1zIiwieW91cl9hcHBfc2VjcmV0Il19)  [![Install MCP Server](../../../assets/trae.svg)](trae://trae.ai-ide/mcp-import?source=lark&type=stdio&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIkBsYXJrc3VpdGVvYXBpL2xhcmstbWNwIiwibWNwIiwiLWEiLCJ5b3VyX2FwcF9pZCIsIi1zIiwieW91cl9hcHBfc2VjcmV0Il19)
+[![Install MCP Server](https://cursor.com/deeplink/mcp-install-light.svg)](https://cursor.com/install-mcp?name=lark-mcp&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImxhcmstbWNwLXpoaXl1ZSIsIm1jcCIsIi1hIiwieW91cl9hcHBfaWQiLCItcyIsInlvdXJfYXBwX3NlY3JldCJdfQ==)
+[![Install MCP Server](../../../assets/trae-cn.svg)](trae-cn://trae.ai-ide/mcp-import?source=lark&type=stdio&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImxhcmstbWNwLXpoaXl1ZSIsIm1jcCIsIi1hIiwieW91cl9hcHBfaWQiLCItcyIsInlvdXJfYXBwX3NlY3JldCJdfQ==)  [![Install MCP Server](../../../assets/trae.svg)](trae://trae.ai-ide/mcp-import?source=lark&type=stdio&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsImxhcmstbWNwLXpoaXl1ZSIsIm1jcCIsIi1hIiwieW91cl9hcHBfaWQiLCItcyIsInlvdXJfYXBwX3NlY3JldCJdfQ==)
 
 
 **Method 2: Manual JSON Configuration**
