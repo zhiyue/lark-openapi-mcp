@@ -68,7 +68,10 @@ export const larkDocxBuiltinSearchTool: McpTool = {
         content: [
           {
             type: 'text' as const,
-            text: JSON.stringify((error as any).response.data),
+            text: JSON.stringify({
+              success: false,
+              error: (error as any)?.response?.data || (error as any)?.message || error,
+            }),
           },
         ],
       };

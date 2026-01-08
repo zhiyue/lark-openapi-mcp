@@ -2,6 +2,18 @@ import { McpTool } from '../../../../types';
 import * as lark from '@larksuiteoapi/node-sdk';
 import { z } from 'zod';
 import { CallToolResult } from '@modelcontextprotocol/sdk/types';
+import {
+  extractDocumentId,
+  BlockType,
+  markdownToBlocks,
+  markdownToBlocksAsync,
+  textToBlock,
+  parseInlineMarkdown,
+  DocumentBlock,
+  TextElement,
+  TextContent,
+  CODE_LANGUAGE_MAP,
+} from '../../../../utils';
 
 // 工具名称类型
 export type docxEditToolName =
@@ -10,62 +22,7 @@ export type docxEditToolName =
   | 'docx.builtin.replace'
   | 'docx.builtin.edit';
 
-// ============ 类型定义 ============
-
-/** 文本元素样式 */
-interface TextElementStyle {
-  bold?: boolean;
-  italic?: boolean;
-  strikethrough?: boolean;
-  underline?: boolean;
-  inline_code?: boolean;
-  background_color?: number;
-  text_color?: number;
-  link?: { url: string };
-}
-
-/** 文本元素 */
-interface TextElement {
-  text_run?: {
-    content: string;
-    text_element_style?: TextElementStyle;
-  };
-  mention_user?: {
-    user_id: string;
-    text_element_style?: TextElementStyle;
-  };
-}
-
-/** 文本块样式 */
-interface TextStyle {
-  align?: number;
-  done?: boolean;
-  folded?: boolean;
-  language?: number;
-  wrap?: boolean;
-}
-
-/** 文本块内容 */
-interface TextContent {
-  style?: TextStyle;
-  elements: TextElement[];
-}
-
-/** 代码块内容 */
-interface CodeContent {
-  style?: {
-    language?: number;
-    wrap?: boolean;
-  };
-  elements: TextElement[];
-}
-
-/** 文档块类型 */
-interface DocumentBlock {
-  block_type: number;
-  text?: TextContent;
-  code?: CodeContent;
-}
+// ============ 本地类型定义（API 返回类型） ============
 
 /** 块列表项（API 返回） */
 interface BlockItem {
@@ -73,7 +30,10 @@ interface BlockItem {
   parent_id?: string;
   block_type?: number;
   text?: TextContent;
-  code?: CodeContent;
+  code?: {
+    style?: { language?: number; wrap?: boolean };
+    elements: TextElement[];
+  };
 }
 
 /** 更新请求 */
@@ -84,26 +44,10 @@ interface UpdateRequest {
   };
 }
 
-/**
- * 辅助函数：从 URL 或直接 ID 中提取 document_id
- */
-function extractDocumentId(documentIdOrUrl: string): string {
-  // 如果是 URL，提取 document_id
-  const urlMatch = documentIdOrUrl.match(/\/docx\/([a-zA-Z0-9]+)/);
-  if (urlMatch) {
-    return urlMatch[1];
-  }
-  // Wiki URL 格式
-  const wikiMatch = documentIdOrUrl.match(/\/wiki\/([a-zA-Z0-9]+)/);
-  if (wikiMatch) {
-    return wikiMatch[1];
-  }
-  // 否则直接返回
-  return documentIdOrUrl;
-}
+// ============ 辅助函数 ============
 
 /**
- * 辅助函数：分页获取文档的所有块
+ * 分页获取文档的所有块
  */
 async function getAllDocumentBlocks(
   client: lark.Client,
@@ -121,21 +65,13 @@ async function getAllDocumentBlocks(
         ? await client.docx.v1.documentBlock.list(
             {
               path: { document_id: documentId },
-              params: {
-                page_size: PAGE_SIZE,
-                document_revision_id: -1,
-                page_token: pageToken,
-              },
+              params: { page_size: PAGE_SIZE, document_revision_id: -1, page_token: pageToken },
             },
             lark.withUserAccessToken(userAccessToken),
           )
         : await client.docx.v1.documentBlock.list({
             path: { document_id: documentId },
-            params: {
-              page_size: PAGE_SIZE,
-              document_revision_id: -1,
-              page_token: pageToken,
-            },
+            params: { page_size: PAGE_SIZE, document_revision_id: -1, page_token: pageToken },
           });
 
     const items = (response.data?.items || []) as BlockItem[];
@@ -147,7 +83,7 @@ async function getAllDocumentBlocks(
 }
 
 /**
- * 辅助函数：分页获取块的所有子块
+ * 分页获取块的所有子块
  */
 async function getAllBlockChildren(
   client: lark.Client,
@@ -166,21 +102,13 @@ async function getAllBlockChildren(
         ? await client.docx.v1.documentBlockChildren.get(
             {
               path: { document_id: documentId, block_id: blockId },
-              params: {
-                document_revision_id: -1,
-                page_size: PAGE_SIZE,
-                page_token: pageToken,
-              },
+              params: { document_revision_id: -1, page_size: PAGE_SIZE, page_token: pageToken },
             },
             lark.withUserAccessToken(userAccessToken),
           )
         : await client.docx.v1.documentBlockChildren.get({
             path: { document_id: documentId, block_id: blockId },
-            params: {
-              document_revision_id: -1,
-              page_size: PAGE_SIZE,
-              page_token: pageToken,
-            },
+            params: { document_revision_id: -1, page_size: PAGE_SIZE, page_token: pageToken },
           });
 
     const items = (response.data?.items || []) as BlockItem[];
@@ -191,262 +119,7 @@ async function getAllBlockChildren(
   return allItems;
 }
 
-/**
- * 辅助函数：将简单文本转换为文档块结构
- */
-function textToBlock(text: string, blockType: number = 2): DocumentBlock {
-  return {
-    block_type: blockType,
-    text: {
-      elements: [
-        {
-          text_run: {
-            content: text,
-          },
-        },
-      ],
-    },
-  };
-}
-
-/**
- * 辅助函数：将 Markdown 转换为文档块数组
- */
-function markdownToBlocks(markdown: string): DocumentBlock[] {
-  const lines = markdown.split('\n');
-  const blocks: DocumentBlock[] = [];
-  let codeBlock: string[] | null = null;
-  let codeLanguage = 1; // PlainText
-
-  const languageMap: Record<string, number> = {
-    plaintext: 1,
-    abap: 2,
-    ada: 3,
-    apache: 4,
-    apex: 5,
-    assembly: 6,
-    bash: 7,
-    csharp: 8,
-    'c++': 9,
-    cpp: 9,
-    c: 10,
-    cobol: 11,
-    css: 12,
-    coffeescript: 13,
-    d: 14,
-    dart: 15,
-    delphi: 16,
-    django: 17,
-    dockerfile: 18,
-    erlang: 19,
-    fortran: 20,
-    go: 22,
-    groovy: 23,
-    html: 24,
-    http: 26,
-    haskell: 27,
-    json: 28,
-    java: 29,
-    javascript: 30,
-    js: 30,
-    julia: 31,
-    kotlin: 32,
-    latex: 33,
-    lisp: 34,
-    lua: 36,
-    matlab: 37,
-    makefile: 38,
-    markdown: 39,
-    nginx: 40,
-    'objective-c': 41,
-    objc: 41,
-    php: 43,
-    perl: 44,
-    powershell: 46,
-    prolog: 47,
-    protobuf: 48,
-    python: 49,
-    py: 49,
-    r: 50,
-    ruby: 52,
-    rust: 53,
-    sas: 54,
-    scss: 55,
-    sql: 56,
-    scala: 57,
-    scheme: 58,
-    shell: 60,
-    swift: 61,
-    thrift: 62,
-    typescript: 63,
-    ts: 63,
-    vbscript: 64,
-    vb: 65,
-    xml: 66,
-    yaml: 67,
-    yml: 67,
-    cmake: 68,
-    diff: 69,
-    graphql: 71,
-    toml: 75,
-  };
-
-  for (const line of lines) {
-    // 处理代码块
-    if (line.startsWith('```')) {
-      if (codeBlock === null) {
-        // 开始代码块
-        codeBlock = [];
-        const lang = line.slice(3).trim().toLowerCase();
-        codeLanguage = languageMap[lang] || 1;
-      } else {
-        // 结束代码块
-        blocks.push({
-          block_type: 14, // Code
-          code: {
-            style: {
-              language: codeLanguage,
-              wrap: false,
-            },
-            elements: [
-              {
-                text_run: {
-                  content: codeBlock.join('\n'),
-                },
-              },
-            ],
-          },
-        });
-        codeBlock = null;
-      }
-      continue;
-    }
-
-    if (codeBlock !== null) {
-      codeBlock.push(line);
-      continue;
-    }
-
-    // 空行跳过
-    if (line.trim() === '') {
-      continue;
-    }
-
-    // 处理标题
-    const h1Match = line.match(/^# (.+)$/);
-    if (h1Match) {
-      blocks.push(textToBlock(h1Match[1], 3)); // Heading1
-      continue;
-    }
-
-    const h2Match = line.match(/^## (.+)$/);
-    if (h2Match) {
-      blocks.push(textToBlock(h2Match[1], 4)); // Heading2
-      continue;
-    }
-
-    const h3Match = line.match(/^### (.+)$/);
-    if (h3Match) {
-      blocks.push(textToBlock(h3Match[1], 5)); // Heading3
-      continue;
-    }
-
-    const h4Match = line.match(/^#### (.+)$/);
-    if (h4Match) {
-      blocks.push(textToBlock(h4Match[1], 6)); // Heading4
-      continue;
-    }
-
-    const h5Match = line.match(/^##### (.+)$/);
-    if (h5Match) {
-      blocks.push(textToBlock(h5Match[1], 7)); // Heading5
-      continue;
-    }
-
-    const h6Match = line.match(/^###### (.+)$/);
-    if (h6Match) {
-      blocks.push(textToBlock(h6Match[1], 8)); // Heading6
-      continue;
-    }
-
-    // 处理无序列表
-    const bulletMatch = line.match(/^[-*+] (.+)$/);
-    if (bulletMatch) {
-      blocks.push(textToBlock(bulletMatch[1], 12)); // Bullet
-      continue;
-    }
-
-    // 处理有序列表
-    const orderedMatch = line.match(/^\d+\. (.+)$/);
-    if (orderedMatch) {
-      blocks.push(textToBlock(orderedMatch[1], 13)); // Ordered
-      continue;
-    }
-
-    // 处理引用
-    const quoteMatch = line.match(/^> (.+)$/);
-    if (quoteMatch) {
-      blocks.push(textToBlock(quoteMatch[1], 15)); // Quote
-      continue;
-    }
-
-    // 处理待办事项
-    const todoUncheckedMatch = line.match(/^- \[ \] (.+)$/);
-    if (todoUncheckedMatch) {
-      blocks.push({
-        block_type: 17, // Todo
-        text: {
-          style: { done: false },
-          elements: [{ text_run: { content: todoUncheckedMatch[1] } }],
-        },
-      });
-      continue;
-    }
-
-    const todoCheckedMatch = line.match(/^- \[x\] (.+)$/i);
-    if (todoCheckedMatch) {
-      blocks.push({
-        block_type: 17, // Todo
-        text: {
-          style: { done: true },
-          elements: [{ text_run: { content: todoCheckedMatch[1] } }],
-        },
-      });
-      continue;
-    }
-
-    // 处理分割线
-    if (/^[-*_]{3,}$/.test(line.trim())) {
-      blocks.push({ block_type: 22 }); // Divider
-      continue;
-    }
-
-    // 默认处理为普通文本
-    blocks.push(textToBlock(line, 2)); // Text
-  }
-
-  // 处理未闭合的代码块
-  if (codeBlock !== null) {
-    blocks.push({
-      block_type: 14, // Code
-      code: {
-        style: {
-          language: codeLanguage,
-          wrap: false,
-        },
-        elements: [
-          {
-            text_run: {
-              content: codeBlock.join('\n'),
-            },
-          },
-        ],
-      },
-    });
-  }
-
-  return blocks;
-}
+// ============ 工具定义 ============
 
 /**
  * 更新文档标题
@@ -469,51 +142,20 @@ export const larkDocxUpdateTitleTool: McpTool = {
       const { userAccessToken } = options || {};
       const documentId = extractDocumentId(params.data.document_id);
 
-      // 使用 documentBlock.patch 更新文档标题（Page 块的 body）
       const response =
         userAccessToken && params.useUAT
           ? await client.docx.v1.documentBlock.patch(
               {
-                path: {
-                  document_id: documentId,
-                  block_id: documentId, // 文档根块 ID 等于 document_id
-                },
-                data: {
-                  update_text_elements: {
-                    elements: [
-                      {
-                        text_run: {
-                          content: params.data.title,
-                        },
-                      },
-                    ],
-                  },
-                },
-                params: {
-                  document_revision_id: -1, // 使用最新版本
-                },
+                path: { document_id: documentId, block_id: documentId },
+                data: { update_text_elements: { elements: [{ text_run: { content: params.data.title } }] } },
+                params: { document_revision_id: -1 },
               },
               lark.withUserAccessToken(userAccessToken),
             )
           : await client.docx.v1.documentBlock.patch({
-              path: {
-                document_id: documentId,
-                block_id: documentId,
-              },
-              data: {
-                update_text_elements: {
-                  elements: [
-                    {
-                      text_run: {
-                        content: params.data.title,
-                      },
-                    },
-                  ],
-                },
-              },
-              params: {
-                document_revision_id: -1,
-              },
+              path: { document_id: documentId, block_id: documentId },
+              data: { update_text_elements: { elements: [{ text_run: { content: params.data.title } }] } },
+              params: { document_revision_id: -1 },
             });
 
       return {
@@ -555,11 +197,11 @@ export const larkDocxAppendTool: McpTool = {
   name: 'docx.builtin.append',
   accessTokens: ['user', 'tenant'],
   description:
-    '[飞书/Lark] - 云文档-文档 - 追加内容 - 在文档末尾追加内容。支持追加文本、标题、列表等多种类型的内容块。',
+    '[飞书/Lark] - 云文档-文档 - 追加内容 - 在文档末尾追加内容。支持 Markdown 格式，包括标题、列表、代码块、表格、图片等。如果内容包含图片 URL，会自动上传图片。',
   schema: {
     data: z.object({
       document_id: z.string().describe('文档 ID 或文档 URL'),
-      content: z.string().describe('要追加的内容（支持 Markdown 格式）'),
+      content: z.string().describe('要追加的内容（支持 Markdown 格式，包括 **加粗**、*斜体*、[链接](url)、![图片](url)、表格等）'),
       block_type: z
         .enum(['text', 'heading1', 'heading2', 'heading3', 'bullet', 'ordered', 'code', 'quote', 'divider', 'auto'])
         .describe(
@@ -570,6 +212,7 @@ export const larkDocxAppendTool: McpTool = {
         .string()
         .describe('代码块语言（仅当 block_type 为 code 时有效），如：javascript, python, go 等')
         .optional(),
+      upload_images: z.boolean().describe('是否自动上传 Markdown 中的图片 URL（默认 true）').default(true),
     }),
     useUAT: z.boolean().describe('使用用户身份请求，否则为应用身份').optional(),
   },
@@ -581,51 +224,41 @@ export const larkDocxAppendTool: McpTool = {
       let children: DocumentBlock[];
 
       if (params.data.block_type === 'auto') {
-        // 自动解析 Markdown
-        children = markdownToBlocks(params.data.content);
+        // 自动解析 Markdown，支持图片上传
+        if (params.data.upload_images) {
+          children = await markdownToBlocksAsync(params.data.content, {
+            uploadImages: true,
+            client,
+            documentId,
+            userAccessToken,
+            useUAT: params.useUAT,
+          });
+        } else {
+          children = markdownToBlocks(params.data.content);
+        }
       } else {
         // 根据指定的 block_type 创建单个块
         const blockTypeMap: Record<string, number> = {
-          text: 2,
-          heading1: 3,
-          heading2: 4,
-          heading3: 5,
-          bullet: 12,
-          ordered: 13,
-          code: 14,
-          quote: 15,
-          divider: 22,
+          text: BlockType.Text,
+          heading1: BlockType.Heading1,
+          heading2: BlockType.Heading2,
+          heading3: BlockType.Heading3,
+          bullet: BlockType.Bullet,
+          ordered: BlockType.Ordered,
+          code: BlockType.Code,
+          quote: BlockType.Quote,
+          divider: BlockType.Divider,
         };
 
-        const blockType = blockTypeMap[params.data.block_type] || 2;
+        const blockType = blockTypeMap[params.data.block_type] || BlockType.Text;
 
-        if (blockType === 22) {
-          // 分割线
-          children = [{ block_type: 22 }];
-        } else if (blockType === 14) {
-          // 代码块
-          const languageMap: Record<string, number> = {
-            javascript: 30,
-            js: 30,
-            typescript: 63,
-            ts: 63,
-            python: 49,
-            py: 49,
-            go: 22,
-            java: 29,
-            rust: 53,
-            cpp: 9,
-            c: 10,
-            sql: 56,
-            json: 28,
-            yaml: 67,
-            shell: 60,
-            bash: 7,
-          };
-          const language = languageMap[(params.data.code_language || '').toLowerCase()] || 1;
+        if (blockType === BlockType.Divider) {
+          children = [{ block_type: BlockType.Divider }];
+        } else if (blockType === BlockType.Code) {
+          const language = CODE_LANGUAGE_MAP[(params.data.code_language || '').toLowerCase()] || 1;
           children = [
             {
-              block_type: 14,
+              block_type: BlockType.Code,
               code: {
                 style: { language, wrap: false },
                 elements: [{ text_run: { content: params.data.content } }],
@@ -637,7 +270,7 @@ export const larkDocxAppendTool: McpTool = {
         }
       }
 
-      // 获取文档所有块以确定插入位置（支持分页）
+      // 获取文档所有块以确定插入位置
       const items = await getAllDocumentBlocks(client, documentId, userAccessToken, params.useUAT);
       const insertIndex = items.length > 0 ? items.length - 1 : 0;
 
@@ -646,32 +279,16 @@ export const larkDocxAppendTool: McpTool = {
         userAccessToken && params.useUAT
           ? await client.docx.v1.documentBlockChildren.create(
               {
-                path: {
-                  document_id: documentId,
-                  block_id: documentId,
-                },
-                data: {
-                  children,
-                  index: insertIndex,
-                },
-                params: {
-                  document_revision_id: -1,
-                },
+                path: { document_id: documentId, block_id: documentId },
+                data: { children, index: insertIndex },
+                params: { document_revision_id: -1 },
               },
               lark.withUserAccessToken(userAccessToken),
             )
           : await client.docx.v1.documentBlockChildren.create({
-              path: {
-                document_id: documentId,
-                block_id: documentId,
-              },
-              data: {
-                children,
-                index: insertIndex,
-              },
-              params: {
-                document_revision_id: -1,
-              },
+              path: { document_id: documentId, block_id: documentId },
+              data: { children, index: insertIndex },
+              params: { document_revision_id: -1 },
             });
 
       return {
@@ -730,18 +347,14 @@ export const larkDocxReplaceTool: McpTool = {
       const documentId = extractDocumentId(params.data.document_id);
       const { search_text, replace_text, block_id, replace_all } = params.data;
 
-      // 获取文档所有块（支持分页）
+      // 获取文档所有块
       const items = await getAllDocumentBlocks(client, documentId, userAccessToken, params.useUAT);
       const updateRequests: UpdateRequest[] = [];
       let replacedCount = 0;
 
       for (const block of items) {
-        // 如果指定了 block_id，只处理该块
-        if (block_id && block.block_id !== block_id) {
-          continue;
-        }
+        if (block_id && block.block_id !== block_id) continue;
 
-        // 获取块的文本内容
         const textContent = block.text?.elements || block.code?.elements || [];
         let hasMatch = false;
         const newElements: TextElement[] = [];
@@ -754,10 +367,9 @@ export const larkDocxReplaceTool: McpTool = {
               const newContent = replace_all
                 ? content.split(search_text).join(replace_text)
                 : content.replace(search_text, replace_text);
-              // 正确计算替换数量：replace_all 时计算所有匹配，否则只计 1
               const escapedText = search_text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
               const matches = content.match(new RegExp(escapedText, 'g')) || [];
-              replacedCount += replace_all ? matches.length : (matches.length > 0 ? 1 : 0);
+              replacedCount += replace_all ? matches.length : matches.length > 0 ? 1 : 0;
               newElements.push({
                 text_run: {
                   content: newContent,
@@ -775,16 +387,11 @@ export const larkDocxReplaceTool: McpTool = {
         if (hasMatch && block.block_id) {
           updateRequests.push({
             block_id: block.block_id,
-            update_text_elements: {
-              elements: newElements,
-            },
+            update_text_elements: { elements: newElements },
           });
         }
 
-        // 如果不是替换所有，且已经找到一个匹配，就停止
-        if (!replace_all && replacedCount > 0) {
-          break;
-        }
+        if (!replace_all && replacedCount > 0) break;
       }
 
       if (updateRequests.length === 0) {
@@ -863,11 +470,11 @@ export const larkDocxEditTool: McpTool = {
   name: 'docx.builtin.edit',
   accessTokens: ['user', 'tenant'],
   description:
-    '[飞书/Lark] - 云文档-文档 - 编辑文档 - 使用 Markdown 格式编辑飞书文档。支持在指定位置插入内容、替换指定块的内容，或清空文档后写入新内容。注意：replace_block 和 clear_and_write 模式涉及多个 API 调用，非原子操作，在高并发编辑场景下可能存在竞态条件。',
+    '[飞书/Lark] - 云文档-文档 - 编辑文档 - 使用 Markdown 格式编辑飞书文档。支持在指定位置插入内容、替换指定块的内容，或清空文档后写入新内容。支持完整的 Markdown 语法，包括标题、列表、代码块、表格、图片（自动上传）等。注意：replace_block 和 clear_and_write 模式涉及多个 API 调用，非原子操作。',
   schema: {
     data: z.object({
       document_id: z.string().describe('文档 ID 或文档 URL'),
-      markdown: z.string().describe('Markdown 格式的内容'),
+      markdown: z.string().describe('Markdown 格式的内容（支持 **加粗**、*斜体*、[链接](url)、![图片](url)、表格等）'),
       mode: z
         .enum(['append', 'prepend', 'replace_block', 'clear_and_write'])
         .describe(
@@ -875,6 +482,7 @@ export const larkDocxEditTool: McpTool = {
         )
         .default('append'),
       block_id: z.string().describe('要替换的块 ID（仅在 mode 为 replace_block 时需要）').optional(),
+      upload_images: z.boolean().describe('是否自动上传 Markdown 中的图片 URL（默认 true）').default(true),
     }),
     useUAT: z.boolean().describe('使用用户身份请求，否则为应用身份').optional(),
   },
@@ -884,18 +492,23 @@ export const larkDocxEditTool: McpTool = {
       const documentId = extractDocumentId(params.data.document_id);
       const { markdown, mode, block_id } = params.data;
 
-      // 将 Markdown 转换为文档块
-      const blocks = markdownToBlocks(markdown);
+      // 将 Markdown 转换为文档块（支持图片上传）
+      const blocks = params.data.upload_images
+        ? await markdownToBlocksAsync(markdown, {
+            uploadImages: true,
+            client,
+            documentId,
+            userAccessToken,
+            useUAT: params.useUAT,
+          })
+        : markdownToBlocks(markdown);
 
       if (blocks.length === 0) {
         return {
           content: [
             {
               type: 'text' as const,
-              text: JSON.stringify({
-                success: false,
-                message: 'Markdown 内容为空或无法解析',
-              }),
+              text: JSON.stringify({ success: false, message: 'Markdown 内容为空或无法解析' }),
             },
           ],
         };
@@ -905,7 +518,6 @@ export const larkDocxEditTool: McpTool = {
 
       switch (mode) {
         case 'append': {
-          // 获取文档所有块以确定插入位置（支持分页）
           const appendItems = await getAllDocumentBlocks(client, documentId, userAccessToken, params.useUAT);
           const insertIndex = appendItems.length > 0 ? appendItems.length - 1 : 0;
 
@@ -953,24 +565,17 @@ export const larkDocxEditTool: McpTool = {
               content: [
                 {
                   type: 'text' as const,
-                  text: JSON.stringify({
-                    success: false,
-                    message: 'replace_block 模式需要指定 block_id',
-                  }),
+                  text: JSON.stringify({ success: false, message: 'replace_block 模式需要指定 block_id' }),
                 },
               ],
             };
           }
 
-          // 先删除原块，再在同一位置插入新块
           // 获取块信息以确定父块和位置
           const blockInfo =
             userAccessToken && params.useUAT
               ? await client.docx.v1.documentBlock.get(
-                  {
-                    path: { document_id: documentId, block_id },
-                    params: { document_revision_id: -1 },
-                  },
+                  { path: { document_id: documentId, block_id }, params: { document_revision_id: -1 } },
                   lark.withUserAccessToken(userAccessToken),
                 )
               : await client.docx.v1.documentBlock.get({
@@ -979,12 +584,10 @@ export const larkDocxEditTool: McpTool = {
                 });
 
           const parentId = blockInfo.data?.block?.parent_id || documentId;
-
-          // 获取父块的所有子块以确定位置（支持分页）
           const children = await getAllBlockChildren(client, documentId, parentId, userAccessToken, params.useUAT);
           const blockIndex = children.findIndex((c: BlockItem) => c.block_id === block_id);
 
-          // 删除原块，并获取新的 document_revision_id
+          // 删除原块并获取新的 revision_id
           const deleteResponse = await (userAccessToken && params.useUAT
             ? client.docx.v1.documentBlockChildren.batchDelete(
                 {
@@ -1000,7 +603,6 @@ export const larkDocxEditTool: McpTool = {
                 params: { document_revision_id: -1 },
               }));
 
-          // 使用删除操作返回的 revision_id 进行插入，减少竞态条件风险
           const newRevisionId = deleteResponse.data?.document_revision_id || -1;
 
           // 在同一位置插入新块
@@ -1023,10 +625,9 @@ export const larkDocxEditTool: McpTool = {
         }
 
         case 'clear_and_write': {
-          // 获取所有子块（支持分页）
           const existingChildren = await getAllBlockChildren(client, documentId, documentId, userAccessToken, params.useUAT);
 
-          // 删除所有现有子块（如果有的话）
+          // 删除所有现有子块
           if (existingChildren.length > 0) {
             await (userAccessToken && params.useUAT
               ? client.docx.v1.documentBlockChildren.batchDelete(
